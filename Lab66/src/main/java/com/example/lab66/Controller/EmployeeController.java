@@ -16,7 +16,7 @@ import java.util.ArrayList;
 public class EmployeeController {
     ArrayList<Employee> employees = new ArrayList<>();
 
-    @GetMapping("get")
+    @GetMapping("/get")
     public ResponseEntity<?> getAll(){
         return ResponseEntity.status(200).body(employees);
     }
@@ -81,5 +81,64 @@ public class EmployeeController {
 
         return ResponseEntity.status(200).body(result);
     }
+
+    public ResponseEntity<?> applyForAnnualLeave(@PathVariable int index) {
+
+        if (index < 0 || index >= employees.size()) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee not found"));
+        }
+
+        Employee employee = employees.get(index);
+        if (Boolean.TRUE.equals(employee.getOnLeave())) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee is already on leave"));
+        }
+
+        if (employee.getAnnualLeave() <= 0) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee has no annual leave days remaining"));
+        }
+
+        employee.setOnLeave(true);
+        employee.setAnnualLeave(employee.getAnnualLeave() - 1);
+        return ResponseEntity.status(200).body(new ApiResponse("annual leave applied successfully") );
+    }
+
+    private Employee findEmployeeById(String id) {
+        for (Employee e : employees) {
+            if (e.getId().equals(id)) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    @PutMapping("/promote/{requesterId}/{employeeId}")
+    public ResponseEntity<?> promoteEmployee(@PathVariable String requesterId,@PathVariable String employeeId) {
+
+        Employee requester = findEmployeeById(requesterId);
+        if (requester == null) {
+            return ResponseEntity.status(400).body(new ApiResponse("requester not found"));
+        }
+
+        if (!"supervisor".equals(requester.getPosition())) {
+            return ResponseEntity.status(400).body(new ApiResponse("only supervisors can promote employees"));
+        }
+
+        Employee employee = findEmployeeById(employeeId);
+        if (employee == null) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee not found"));
+        }
+
+        if (employee.getAge() < 30) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee must be at least 30 years old"));
+        }
+
+        if (Boolean.TRUE.equals(employee.getOnLeave())) {
+            return ResponseEntity.status(400).body(new ApiResponse("employee is on leave"));
+        }
+
+        employee.setPosition("supervisor");
+        return ResponseEntity.status(200).body(new ApiResponse("promoted to supervisor"));
+    }
+
 
 }
